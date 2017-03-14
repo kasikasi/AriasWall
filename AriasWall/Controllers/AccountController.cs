@@ -8,6 +8,8 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Security;
 using AriasWall.Models;
+using System.Net.Mail;
+using System.IO;
 
 namespace AriasWall.Controllers
 {
@@ -94,8 +96,42 @@ namespace AriasWall.Controllers
 
                 if (createStatus == MembershipCreateStatus.Success)
                 {
+                    StreamReader objLector;
+                    string HTML = "";
+
                     FormsService.SignIn(model.UserName, false /* createPersistentCookie */);
-                    return RedirectToAction("Index", "Home");
+
+                    // Send welcome e-mail using local host.
+                    SmtpClient smtpClient = new SmtpClient();
+                    smtpClient.UseDefaultCredentials = true;
+
+                    objLector = System.IO.File.OpenText(Server.MapPath("~/Content/mail/Welcome.html"));
+                    HTML = objLector.ReadToEnd();
+                    objLector.Close();
+
+                    HTML = HTML.Replace("@user", model.UserName);
+
+                    string to = model.Email;
+                    string from = "no-respond@ariaswall.com";
+                    MailMessage message = new MailMessage(from, to);
+                    message.Subject = "Welcome to AriasWall";
+                    message.Body = HTML;
+                    message.IsBodyHtml = true;
+                    //SMTP config.
+                    smtpClient.Host = "localhost";
+                    smtpClient.Port = 25;
+
+                    try
+                    {
+                        smtpClient.Send(message);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Exception caught in CreateTestMessage2(): {0}",
+                                    ex.ToString());
+
+                        return RedirectToAction("Index", "Home");
+                    }
                 }
                 else
                 {
